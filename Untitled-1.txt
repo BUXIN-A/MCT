@@ -1,0 +1,63 @@
+MCT/
+├── main.py                      # 程序入口
+├── requirements.txt             # 依赖清单
+│
+├── assets/                      # 静态资源
+│   ├── icons/                   # 图标文件 (.png/.ico)
+│   │   ├── app.ico
+│   │   ├── diamond_sword.png
+│   │   ├── grass_block.png
+│   │   └── ...
+│   ├── images/                  # 图片素材（背景图、物品渲染图等）
+│   │   ├── bg_light.png
+│   │   └── bg_dark.png
+│   └── fonts/                   # 自定义字体（如 Minecraft 像素字体）
+│       └── minecraft.ttf
+│
+├── core/                        # 核心逻辑层
+│   ├── __init__.py
+│   ├── config.py                # 全局配置（窗口大小、主题色、默认值等）
+│   ├── constants.py             # Minecraft 常量（物品ID、附魔ID、效果ID等）
+│   └── theme.py                 # 明暗主题管理（封装 Maliang 主题切换）
+│
+├── services/                    # 业务逻辑层（无 UI 依赖）
+│   ├── __init__.py
+│   ├── item_service.py          # 物品管理逻辑（物品搜索、分类、NBT生成）
+│   ├── enchant_service.py       # 附魔逻辑（附魔组合、等级计算、冲突检测）
+│   ├── player_service.py        # 玩家管理逻辑（血量、饥饿值、经验、游戏模式）
+│   ├── world_service.py         # 地图/世界管理逻辑（种子、传送、结构定位）
+│   └── effect_service.py        # 状态效果逻辑（药水效果、粒子参数）
+│
+├── ui/                          # UI 层（Maliang 组件为主）
+│   ├── __init__.py
+│   ├── app.py                   # 主窗口 Tk 实例化 + 导航框架搭建
+│   ├── sidebar.py               # 左侧导航栏（功能切换按钮组）
+│   │
+│   ├── pages/                   # 各功能页面（Canvas 容器）
+│   │   ├── __init__.py
+│   │   ├── page_home.py         # 首页/欢迎页
+│   │   ├── page_items.py        # 物品获取页（搜索、分类、批量添加）
+│   │   ├── page_enchant.py      # 附魔页（武器/工具选择 + 附魔配置）
+│   │   ├── page_player.py       # 玩家管理页（属性修改、模式切换）
+│   │   ├── page_world.py        # 世界管理页（种子、传送、结构）
+│   │   ├── page_effects.py      # 状态效果页（药水、效果配置）
+│   │   └── page_settings.py     # 设置页（语言、主题、快捷键）
+│   │
+│   └── components/              # 可复用 UI 控件
+│       ├── __init__.py
+│       ├── mc_button.py         # Minecraft 风格按钮（像素风样式封装）
+│       ├── item_slot.py         # 物品格控件（格子+图标+数量）
+│       ├── search_bar.py        # 搜索栏（含自动补全）
+│       ├── enchant_table.py     # 附魔台模拟控件
+│       ├── stat_bar.py          # 属性条（血量/饥饿值 条状显示）
+│       └── toast.py             # 轻提示组件
+│
+├── utils/                       # 工具函数
+│   ├── __init__.py
+│   ├── file_utils.py            # 文件读写（配置持久化、资源加载路径）
+│   └── data_utils.py            # 数据转换（物品ID ↔ 名称、版本适配等）
+│
+└── data/                        # 静态数据文件（JSON/CSV，非代码）
+    ├── items.json               # 物品数据库（ID、名称、分类、最大堆叠数）
+    ├── enchants.json            # 附魔数据库（ID、名称、最大等级、适用物品类型）
+    └── effects.json             # 状态效果数据库

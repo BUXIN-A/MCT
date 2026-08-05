@@ -1,0 +1,28 @@
+{
+    "en_us": {
+        "title": "Minecraft Toolbox",
+
+        "log.i18n": "Importing language file",
+        "log.open_app": "Starting Minecraft Toolbox ...",
+        "log.start_complete": "Minecraft Toolbox started successfully",
+        "log.ready": "Minecraft Toolbox is ready to use",
+        "log.language_set": "Language set to {0}",
+        "log.show_setting_page": "Showing setting page",
+        "log.restart_app": "Restarting Minecraft Toolbox ...",
+
+        "menu": "Menu",
+
+        "home.title": "Home",
+        "home.content": "# MCT\n## Introduction\nMCT stands for Minecraft Tools. It integrates all the World-related tools developed by me for this project, providing a user-friendly interface and functions to help players and developers operate and manage the game more efficiently.",
+
+        "resource.title": "Resource Pack Tool",
+
+        "about.title": "About",
+
+        "setting.title": "Settings",
+        "setting.system.title": "System Settings",
+        "setting.language": "Language",
+        "setting.language_tip": "Restart the application to apply language settings",
+        "setting.theme.title": "Theme Settings"
+    }
+}

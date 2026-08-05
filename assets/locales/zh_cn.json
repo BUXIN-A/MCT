@@ -1,0 +1,28 @@
+{
+    "zh_cn": {
+        "title": "Minecraft 工具箱",
+
+        "log.i18n": "导入语言文件",
+        "log.open_app": "正在启动 Minecraft 工具箱 ...",
+        "log.start_complete": "Minecraft 工具箱启动成功",
+        "log.ready": "Minecraft 工具箱已就绪",
+        "log.language_set": "语言切换到 {0}",
+        "log.show_setting_page": "显示设置页面",
+        "log.restart_app": "正在重启 Minecraft 工具箱 ...",
+
+        "menu": "菜单",
+
+        "home.title": "首页",
+        "home.content": "# MCT\n## 介绍\nMCT 全称 Minecraft Tools\nMCT整合了本项目开发的所有我的世界相关工具，提供了方便的界面和功能，帮助玩家以及开发者更高效地进行游戏和管理。",
+
+        "resource.title": "资源包工具",
+
+        "about.title": "关于",
+
+        "setting.title": "设置",
+        "setting.system.title": "系统设置",
+        "setting.language": "语言",
+        "setting.language_tip": "重启应用以应用语言设置",
+        "setting.theme.title": "主题设置"
+    }
+}
