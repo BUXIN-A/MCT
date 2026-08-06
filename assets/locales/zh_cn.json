@@ -33,6 +33,34 @@
         "plugins.page_nav": "插件页面导航",
         "plugins.status.loaded": "已加载",
         "plugins.status.error": "加载失败",
-        "plugins.status.uninit": "未初始化"
+        "plugins.status.uninit": "未初始化",
+        "plugins.status.disabled": "已禁用",
+
+        "plugins.detail": "插件详情",
+        "plugins.detail.name": "名称",
+        "plugins.detail.display_name": "显示名称",
+        "plugins.detail.desc": "描述",
+        "plugins.detail.version": "版本",
+        "plugins.detail.author": "作者",
+        "plugins.detail.repo": "仓库地址",
+        "plugins.detail.status": "状态",
+        "plugins.detail.path": "路径",
+        "plugins.detail.error_info": "错误信息",
+
+        "plugins.enable": "启用",
+        "plugins.disable": "禁用",
+
+        "plugins.import": "导入插件",
+        "plugins.import.success": "插件导入成功",
+        "plugins.import.fail": "插件导入失败",
+        "plugins.export": "导出",
+        "plugins.export.success": "插件导出成功",
+        "plugins.delete": "删除",
+        "plugins.delete.confirm": "确认删除插件 '{0}' 吗？此操作不可撤销。",
+        "plugins.delete.success": "插件已删除",
+        "plugins.delete.fail": "插件删除失败",
+        "plugins.delete.cancel": "已取消删除",
+        "plugins.confirm": "确认",
+        "plugins.cancel": "取消"
     }
 }

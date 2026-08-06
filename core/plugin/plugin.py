@@ -3,6 +3,9 @@ import importlib.util
 import asyncio
 import inspect
 import traceback
+import shutil
+import zipfile
+import tempfile
 
 import yaml
 
@@ -12,6 +15,9 @@ from ui import theme
 
 PLUGIN_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins")
 PLUGIN_DIR = os.path.abspath(PLUGIN_DIR)
+
+PLUGIN_CONFIG_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins_config.json")
+PLUGIN_CONFIG_DIR = os.path.abspath(PLUGIN_CONFIG_DIR)
 
 
 class PluginMeta:
@@ -177,8 +183,13 @@ def _run_async(coro):
 def run_plugins(mct=None):
     """初始化并运行所有已发现的插件"""
     plugins = discover_plugins()
+    disabled = get_disabled_plugins()
 
     for name, info in plugins.items():
+        if name in disabled:
+            logger.info("插件 %s 已禁用，跳过初始化", name)
+            continue
+
         init_method = getattr(info.instance, "initialize", None)
         if init_method is None:
             logger.warning("插件 %s 没有定义 initialize 方法，跳过", name)
@@ -206,8 +217,12 @@ def register_plugin_pages():
 
     pages = get_plugin_pages()
     all_plugins = get_all_plugins()
+    disabled = get_disabled_plugins()
 
     for page_id, page_handler in pages.items():
+        if page_id in disabled:
+            continue
+
         meta = all_plugins[page_id].meta if page_id in all_plugins else None
         title = meta.display_name if meta else page_id
 
@@ -242,12 +257,145 @@ def get_plugin(name):
     return discover_plugins().get(name)
 
 
+def _load_plugins_config():
+    """读取插件配置文件"""
+    import json5
+    if not os.path.exists(PLUGIN_CONFIG_DIR):
+        return {"disabled": []}
+    try:
+        with open(PLUGIN_CONFIG_DIR, "r", encoding="utf-8") as f:
+            return json5.load(f) or {"disabled": []}
+    except Exception:
+        return {"disabled": []}
+
+
+def _save_plugins_config(config):
+    """保存插件配置文件"""
+    import json5
+    with open(PLUGIN_CONFIG_DIR, "w", encoding="utf-8") as f:
+        json5.dump(config, f, ensure_ascii=False, indent=4, quote_keys=True)
+
+
+def get_disabled_plugins():
+    """获取已禁用的插件列表"""
+    return _load_plugins_config().get("disabled", [])
+
+
+def set_plugin_disabled(name, disabled):
+    """设置插件禁用状态"""
+    config = _load_plugins_config()
+    disabled_list = config.get("disabled", [])
+    if disabled and name not in disabled_list:
+        disabled_list.append(name)
+    elif not disabled and name in disabled_list:
+        disabled_list.remove(name)
+    config["disabled"] = disabled_list
+    _save_plugins_config(config)
+
+
 def reload_plugins(mct=None):
     """强制重新加载所有插件"""
     global _plugin_cache
     _plugin_cache = None
-    # 清空 initialization 注册表中的旧条目
     initialization.plugins.clear()
     plugins = discover_plugins()
     run_plugins(mct)
     return plugins
+
+
+def import_plugin(zip_path):
+    """从 zip 文件导入插件，返回 (success, message)"""
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            meta_found = False
+            author = None
+            plugin_name = None
+
+            for name in zf.namelist():
+                if name.endswith('metadata.yaml'):
+                    meta_found = True
+                    with zf.open(name) as f:
+                        data = yaml.safe_load(f) or {}
+                    author = data.get("author", "")
+                    plugin_name = data.get("name", "")
+                    break
+
+            if not meta_found or not author or not plugin_name:
+                return False, "Invalid plugin: missing metadata.yaml or author/name"
+
+            target_dir = os.path.join(PLUGIN_DIR, author, plugin_name)
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            os.makedirs(target_dir, exist_ok=True)
+
+            for member in zf.namelist():
+                parts = member.split('/')
+                if len(parts) <= 1:
+                    continue
+                relative = '/'.join(parts[1:])
+                if not relative:
+                    continue
+                target_path = os.path.join(target_dir, relative)
+                if member.endswith('/'):
+                    os.makedirs(target_path, exist_ok=True)
+                else:
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    with zf.open(member) as src, open(target_path, 'wb') as dst:
+                        dst.write(src.read())
+
+        logger.info("插件 %s 导入成功", plugin_name)
+        return True, plugin_name
+    except Exception as e:
+        logger.error("插件导入失败: %s", traceback.format_exc())
+        return False, str(e)
+
+
+def export_plugin(name):
+    """导出插件为 zip 文件，返回 zip 文件路径或 None"""
+    plugins = discover_plugins()
+    if name not in plugins:
+        return None
+
+    info = plugins[name]
+    plugin_dir = info.dir
+
+    try:
+        tmp_dir = tempfile.mkdtemp()
+        zip_path = os.path.join(tmp_dir, f"{name}.zip")
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for root, dirs, files in os.walk(plugin_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, os.path.dirname(plugin_dir))
+                    zf.write(file_path, arcname)
+
+        logger.info("插件 %s 导出成功: %s", name, zip_path)
+        return zip_path
+    except Exception as e:
+        logger.error("插件导出失败: %s", traceback.format_exc())
+        return None
+
+
+def delete_plugin(name):
+    """删除插件目录，返回 (success, message)"""
+    plugins = discover_plugins()
+    if name not in plugins:
+        return False, f"Plugin '{name}' not found"
+
+    info = plugins[name]
+    plugin_dir = info.dir
+
+    try:
+        set_plugin_disabled(name, True)
+        shutil.rmtree(plugin_dir)
+
+        author_dir = os.path.dirname(plugin_dir)
+        if os.path.exists(author_dir) and not os.listdir(author_dir):
+            os.rmdir(author_dir)
+
+        logger.info("插件 %s 已删除", name)
+        return True, name
+    except Exception as e:
+        logger.error("插件删除失败: %s", traceback.format_exc())
+        return False, str(e)

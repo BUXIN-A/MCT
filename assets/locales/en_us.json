@@ -33,6 +33,34 @@
         "plugins.page_nav": "Plugin Page Navigation",
         "plugins.status.loaded": "Loaded",
         "plugins.status.error": "Load Failed",
-        "plugins.status.uninit": "Uninitialized"
+        "plugins.status.uninit": "Uninitialized",
+        "plugins.status.disabled": "Disabled",
+
+        "plugins.detail": "Plugin Details",
+        "plugins.detail.name": "Name",
+        "plugins.detail.display_name": "Display Name",
+        "plugins.detail.desc": "Description",
+        "plugins.detail.version": "Version",
+        "plugins.detail.author": "Author",
+        "plugins.detail.repo": "Repository",
+        "plugins.detail.status": "Status",
+        "plugins.detail.path": "Path",
+        "plugins.detail.error_info": "Error Info",
+
+        "plugins.enable": "Enable",
+        "plugins.disable": "Disable",
+
+        "plugins.import": "Import Plugin",
+        "plugins.import.success": "Plugin imported successfully",
+        "plugins.import.fail": "Plugin import failed",
+        "plugins.export": "Export",
+        "plugins.export.success": "Plugin exported successfully",
+        "plugins.delete": "Delete",
+        "plugins.delete.confirm": "Are you sure you want to delete plugin '{0}'? This action cannot be undone.",
+        "plugins.delete.success": "Plugin deleted",
+        "plugins.delete.fail": "Plugin deletion failed",
+        "plugins.delete.cancel": "Deletion cancelled",
+        "plugins.confirm": "Confirm",
+        "plugins.cancel": "Cancel"
     }
 }

@@ -24,7 +24,7 @@ _FILE_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 _CONSOLE_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 # ── 临时配置 ────────────────────────────────────────────────
-save_log = False
+save_log = True  # 是否保存日志文件
 
 def _ensure_log_dir() -> None:
     """确保日志文件夹存在"""
