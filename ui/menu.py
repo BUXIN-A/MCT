@@ -17,7 +17,7 @@ def menu() -> None:
     for item in menu_list:
         ui.link(I18N(item['name']), item['url']).classes(replace='text-black')
 
-    # 插件页面下拉框 — 动态从插件系统获取
+    # 插件页面下拉框
     plugin_pages = plugin.get_plugin_pages()
     all_plugins = plugin.get_all_plugins()
 

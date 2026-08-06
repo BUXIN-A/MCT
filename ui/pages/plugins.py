@@ -19,7 +19,6 @@ class PluginsPage:
             ui.label(I18N('plugins.title')).classes('text-h4')
             ui.separator()
 
-            # 顶部操作栏
             with ui.row().classes('w-full items-center justify-between mt-4'):
                 ui.label(I18N('plugins.title')).classes('text-h6')
                 with ui.row().classes('gap-2'):
@@ -40,7 +39,6 @@ class PluginsPage:
                 for name, info in all_plugins.items():
                     self._render_plugin_card(name, info, name in disabled_list)
 
-            # 渲染插件页面导航
             plugin_pages = plugin.get_plugin_pages()
             enabled_pages = {k: v for k, v in plugin_pages.items() if k not in disabled_list}
             if enabled_pages:
@@ -82,25 +80,20 @@ class PluginsPage:
                         ui.label(meta.desc).classes('text-caption text-grey')
 
                 with ui.row().classes('items-center gap-1'):
-                    # 开关：启用/禁用
                     ui.switch(
                         value=not is_disabled,
                         on_change=lambda e, n=name: self._toggle_plugin(n, e.value),
                     ).props('color=green')
 
-                    # 详情按钮
                     ui.button(icon='info', on_click=lambda n=name, i=name, inf=info, dis=is_disabled: self._show_detail(n, inf, dis)).props('flat color=blue')
 
-                    # 错误按钮
                     if info.error:
                         ui.button(icon='error', on_click=lambda e=info.error: ui.notify(
                             e, type='negative', multi_line=True, timeout=0
                         )).props('flat color=red')
 
-                    # 导出按钮
                     ui.button(icon='download', on_click=lambda n=name: self._export_plugin(n)).props('flat color=orange')
 
-                    # 删除按钮
                     ui.button(icon='delete', on_click=lambda n=name, d=meta.display_name: self._confirm_delete(n, d)).props('flat color=red')
 
     def _toggle_plugin(self, name, enabled):
@@ -111,7 +104,6 @@ class PluginsPage:
             I18N('plugins.enable') if enabled else I18N('plugins.disable'),
             type='positive'
         )
-        # 刷新页面
         ui.navigate.to('/plugins')
 
     def _show_detail(self, name, info, is_disabled):

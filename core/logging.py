@@ -1,14 +1,4 @@
-# 此模块由 Trea 编写
-"""
-日志模块 —— 按启动时间 + 序号创建日志文件
-
-功能:
-    - 自动创建日志文件夹 e:\Python\MCT\logs
-    - 文件名格式：YYYYMMDD-HHMM-N.log（N 是分钟内的序号）
-    - 文件日志 + 控制台日志同时输出
-    - 统一接口：logger.debug/info/warning/error
-"""
-
+# 日志模块 - 由AI生成
 import glob
 import logging
 import os

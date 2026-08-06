@@ -32,7 +32,7 @@ class Config:
     # ── 应用信息 ──
     APP_VERSION: Final = "0.0.2"
 
-    # ── 窗口 ──
+    # ── 窗口 ── #正式版启用
     WINDOW_SIZE: Final = (1200, 760)
     WINDOW_MIN_SIZE: Final = (960, 600)
 

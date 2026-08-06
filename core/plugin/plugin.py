@@ -1,5 +1,4 @@
-"""Plugin system: discovery, loading, lifecycle, import/export."""
-
+"""Plugin system"""
 import os
 import importlib.util
 import asyncio
@@ -177,7 +176,6 @@ def _load_single_plugin(
         )
         plugin_cls = registered["class"]
 
-    # Issue 11: Log security warning about arbitrary code execution
     logger.warning(
         "SECURITY: Executing plugin code from %s/%s — "
         "plugins run arbitrary Python code with full host access. "
@@ -185,7 +183,6 @@ def _load_single_plugin(
         author, plugin_dir_name,
     )
 
-    # Issue 10: Remove silent fallback; log clear error on signature mismatch
     try:
         instance = plugin_cls()
     except TypeError as e:
@@ -389,7 +386,6 @@ def import_plugin(zip_path: str) -> tuple[bool, str]:
             target_dir = os.path.join(PLUGIN_DIR, author, plugin_name)
             target_dir = os.path.abspath(target_dir)
 
-            # Issue 12: Validate target_dir is within PLUGIN_DIR to prevent zip slip
             if not target_dir.startswith(os.path.abspath(PLUGIN_DIR) + os.sep) \
                     and target_dir != os.path.abspath(PLUGIN_DIR):
                 return False, "Invalid plugin path: directory traversal detected"
@@ -408,7 +404,6 @@ def import_plugin(zip_path: str) -> tuple[bool, str]:
                 target_path = os.path.join(target_dir, relative)
                 target_path = os.path.abspath(target_path)
 
-                # Issue 12: Validate each extracted path stays within target_dir
                 if not target_path.startswith(target_dir + os.sep) \
                         and target_path != target_dir:
                     logger.warning(
@@ -424,7 +419,6 @@ def import_plugin(zip_path: str) -> tuple[bool, str]:
                     with zf.open(member) as src, open(target_path, 'wb') as dst:
                         dst.write(src.read())
 
-        # Issue 19: Invalidate cache after import
         _invalidate_cache()
 
         logger.info("Plugin %s imported successfully", plugin_name)
@@ -478,7 +472,6 @@ def delete_plugin(name: str) -> tuple[bool, str]:
         if os.path.exists(author_dir) and not os.listdir(author_dir):
             os.rmdir(author_dir)
 
-        # Issue 19: Invalidate cache after delete
         _invalidate_cache()
 
         logger.info("Plugin %s deleted", name)
