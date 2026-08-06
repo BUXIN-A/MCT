@@ -14,10 +14,10 @@ menu_list = [
 
 @ui.refreshable
 def menu() -> None:
-    for item in menu_list:
-        ui.link(I18N(item['name']), item['url']).classes(replace='text-black')
+    with ui.button_group().classes('flex-col items-stretch w-full').style('width: calc(100% - 40px); margin-left: 20px; margin-right: 20px;'):
+        for item in menu_list:
+            ui.button(I18N(item['name']), on_click=lambda : ui.navigate.to(item['url'])).classes('w-full text-left').style('text-decoration: none;')
 
-    # 插件页面下拉框
     plugin_pages = plugin.get_plugin_pages()
     all_plugins = plugin.get_all_plugins()
 
