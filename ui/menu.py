@@ -1,4 +1,5 @@
 from core import I18N
+from core import logger
 from core.plugin import plugin
 
 from nicegui import ui
@@ -11,12 +12,15 @@ menu_list = [
     {'name': 'about.title', 'url': '/about'}
 ]
 
+def navigate_and_log(url: str):
+    ui.navigate.to(url)
+    logger.info(f'进入界面 "{url}"')
 
 @ui.refreshable
 def menu() -> None:
     with ui.button_group().classes('flex-col items-stretch w-full').style('width: calc(100% - 40px); margin-left: 20px; margin-right: 20px;'):
         for item in menu_list:
-            ui.button(I18N(item['name']), on_click=lambda _, u=item['url']: ui.navigate.to(u)).classes('w-full text-left').style('text-decoration: none;')
+            ui.button(I18N(item['name']), on_click=lambda _, u=item['url']:navigate_and_log(u)).classes('w-full text-left').style('text-decoration: none;')
 
     plugin_pages = plugin.get_plugin_pages()
     all_plugins = plugin.get_all_plugins()
