@@ -1,4 +1,5 @@
 from core import I18N
+from core import i18n_key_exists
 from core.plugin import plugin
 
 from ui import theme
@@ -174,7 +175,7 @@ class PluginsPage:
             ui.download(zip_path, filename=f"{name}.zip")
             ui.notify(I18N('plugins.export.success'), type='positive')
         else:
-            ui.notify(I18N('plugins.export.fail') if I18N('plugins.export.fail') != 'plugins.export.fail' else 'Export failed', type='negative')
+            ui.notify(I18N('plugins.export.fail'), type='negative')
 
     def _confirm_delete(self, name, display_name):
         """确认删除弹窗"""

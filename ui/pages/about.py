@@ -20,7 +20,6 @@ class AboutPage:
         ]
     def show(self):
         with theme.frame(I18N('about.title')):
-            global columns, rows
             ui.label(I18N('about.title')).classes('text-h4')
             ui.label(f"VERSION: {Config.APP_VERSION}").classes('text-h6')
             ui.markdown('''

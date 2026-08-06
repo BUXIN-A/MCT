@@ -1,3 +1,5 @@
+"""Plugin system: discovery, loading, lifecycle, import/export."""
+
 import os
 import importlib.util
 import asyncio
@@ -6,6 +8,7 @@ import traceback
 import shutil
 import zipfile
 import tempfile
+from typing import Any, Optional
 
 import yaml
 
@@ -13,17 +16,27 @@ from core.logging import logger
 from core.plugin.register.handler import initialization
 from ui import theme
 
-PLUGIN_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins")
-PLUGIN_DIR = os.path.abspath(PLUGIN_DIR)
+PLUGIN_DIR: str = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins")
+)
 
-PLUGIN_CONFIG_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins_config.json")
-PLUGIN_CONFIG_DIR = os.path.abspath(PLUGIN_CONFIG_DIR)
+PLUGIN_CONFIG_DIR: str = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins_config.json")
+)
 
 
 class PluginMeta:
-    """插件元数据"""
+    """Plugin metadata loaded from metadata.yaml."""
 
-    def __init__(self, name, display_name="", desc="", version="0.0.0", author="", repo=""):
+    def __init__(
+        self,
+        name: str,
+        display_name: str = "",
+        desc: str = "",
+        version: str = "0.0.0",
+        author: str = "",
+        repo: str = "",
+    ) -> None:
         self.name = name
         self.display_name = display_name or name
         self.desc = desc
@@ -32,7 +45,7 @@ class PluginMeta:
         self.repo = repo
 
     @classmethod
-    def from_yaml(cls, path):
+    def from_yaml(cls, path: str) -> Optional["PluginMeta"]:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
@@ -49,9 +62,17 @@ class PluginMeta:
 
 
 class PluginInfo:
-    """单个插件的完整信息"""
+    """Full state for a single plugin."""
 
-    def __init__(self, author, plugin_dir, meta, module, plugin_cls, instance):
+    def __init__(
+        self,
+        author: str,
+        plugin_dir: str,
+        meta: PluginMeta,
+        module: Any,
+        plugin_cls: Any,
+        instance: Any,
+    ) -> None:
         self.author = author
         self.dir = plugin_dir
         self.meta = meta
@@ -59,22 +80,22 @@ class PluginInfo:
         self.plugin_cls = plugin_cls
         self.instance = instance
         self.loaded = False
-        self.error = None
+        self.error: Optional[str] = None
 
 
-_plugin_cache = None
+_plugin_cache: Optional[dict[str, PluginInfo]] = None
 
 
-def discover_plugins():
-    """扫描插件目录，返回 {plugin_name: PluginInfo} 字典"""
+def discover_plugins() -> dict[str, PluginInfo]:
+    """Scan plugin directory and return {plugin_name: PluginInfo} dict."""
     global _plugin_cache
     if _plugin_cache is not None:
         return _plugin_cache
 
-    plugins = {}
+    plugins: dict[str, PluginInfo] = {}
 
     if not os.path.isdir(PLUGIN_DIR):
-        logger.warning("插件目录不存在: %s", PLUGIN_DIR)
+        logger.warning("Plugin directory does not exist: %s", PLUGIN_DIR)
         _plugin_cache = plugins
         return plugins
 
@@ -96,8 +117,10 @@ def discover_plugins():
     return plugins
 
 
-def _load_single_plugin(author, plugin_dir_name, plugin_path):
-    """加载单个插件，返回 PluginInfo 或 None"""
+def _load_single_plugin(
+    author: str, plugin_dir_name: str, plugin_path: str
+) -> Optional[PluginInfo]:
+    """Load a single plugin. Returns PluginInfo or None."""
     meta_path = os.path.join(plugin_path, "metadata.yaml")
     meta = PluginMeta.from_yaml(meta_path)
     if meta is None:
@@ -123,8 +146,15 @@ def _load_single_plugin(author, plugin_dir_name, plugin_path):
 
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
+            logger.debug(
+                "Plugin module loaded: %s/%s [%s]",
+                author, plugin_dir_name, filename,
+            )
         except Exception:
-            logger.error("加载插件 %s/%s 的模块 %s 失败:\n%s", author, plugin_dir_name, filename, traceback.format_exc())
+            logger.error(
+                "Failed to load module %s/%s/%s:\n%s",
+                author, plugin_dir_name, filename, traceback.format_exc(),
+            )
             continue
 
         plugin_cls = getattr(module, "Plugin", None)
@@ -132,24 +162,47 @@ def _load_single_plugin(author, plugin_dir_name, plugin_path):
             break
 
     if plugin_cls is None:
-        logger.warning("插件 %s/%s 没有定义 Plugin 类，跳过", author, plugin_dir_name)
+        logger.warning(
+            "Plugin %s/%s does not define a Plugin class, skipping",
+            author, plugin_dir_name,
+        )
         return None
 
-    # 检查 initialization 注册表中是否已注册此插件
+    # Check if already registered via @initialization.register
     registered = initialization.get(meta.name)
     if registered is not None:
-        logger.debug("插件 %s 已通过 @initialization.register 注册，跳过重复实例化", meta.name)
-        # 使用注册表中的类而非重新加载
+        logger.debug(
+            "Plugin %s already registered via @initialization.register, "
+            "skipping duplicate instantiation", meta.name,
+        )
         plugin_cls = registered["class"]
 
+    # Issue 11: Log security warning about arbitrary code execution
+    logger.warning(
+        "SECURITY: Executing plugin code from %s/%s — "
+        "plugins run arbitrary Python code with full host access. "
+        "Only install plugins from trusted sources.",
+        author, plugin_dir_name,
+    )
+
+    # Issue 10: Remove silent fallback; log clear error on signature mismatch
     try:
         instance = plugin_cls()
-    except TypeError:
-        try:
-            instance = plugin_cls(None)
-        except Exception:
-            logger.error("实例化插件 %s/%s 失败:\n%s", author, plugin_dir_name, traceback.format_exc())
-            return None
+    except TypeError as e:
+        sig = inspect.signature(plugin_cls)
+        params = list(sig.parameters.keys())
+        logger.error(
+            "Plugin %s/%s constructor %s() does not match signature %s. "
+            "Plugin class must accept 0 arguments (got TypeError: %s)",
+            author, plugin_dir_name, plugin_cls.__name__, params, e,
+        )
+        return None
+    except Exception:
+        logger.error(
+            "Failed to instantiate plugin %s/%s:\n%s",
+            author, plugin_dir_name, traceback.format_exc(),
+        )
+        return None
 
     info = PluginInfo(
         author=author,
@@ -162,37 +215,38 @@ def _load_single_plugin(author, plugin_dir_name, plugin_path):
     return info
 
 
-def _run_async(coro):
-    """在已有或新的事件循环中运行协程"""
+def _run_async(coro: Any) -> Any:
+    """Run a coroutine in an existing or new event loop."""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = None
 
     if loop is not None:
-        # 已有事件循环运行中（如 NiceGUI），使用 ensure_future 调度
-        # 注意：调用方需自行 await 产生的 task
         import warnings
-        warnings.warn("在已有事件循环中调用异步插件初始化，请确保在异步上下文中运行", RuntimeWarning)
+        warnings.warn(
+            "Calling async plugin init from within an existing event loop. "
+            "Ensure this runs in an async context.",
+            RuntimeWarning,
+        )
         return asyncio.ensure_future(coro)
     else:
-        # 无事件循环，直接运行
         return asyncio.run(coro)
 
 
-def run_plugins(mct=None):
-    """初始化并运行所有已发现的插件"""
+def run_plugins(mct: Any = None) -> None:
+    """Initialize and run all discovered plugins."""
     plugins = discover_plugins()
     disabled = get_disabled_plugins()
 
     for name, info in plugins.items():
         if name in disabled:
-            logger.info("插件 %s 已禁用，跳过初始化", name)
+            logger.info("Plugin %s is disabled, skipping initialization", name)
             continue
 
         init_method = getattr(info.instance, "initialize", None)
         if init_method is None:
-            logger.warning("插件 %s 没有定义 initialize 方法，跳过", name)
+            logger.warning("Plugin %s has no initialize method, skipping", name)
             continue
 
         try:
@@ -205,14 +259,17 @@ def run_plugins(mct=None):
                 _run_async(result)
 
             info.loaded = True
-            logger.info("插件 %s (%s) 初始化成功", info.meta.display_name, info.meta.version)
+            logger.info(
+                "Plugin %s (%s) initialized successfully",
+                info.meta.display_name, info.meta.version,
+            )
         except Exception:
             info.error = traceback.format_exc()
-            logger.error("插件 %s 初始化失败:\n%s", name, info.error)
+            logger.error("Plugin %s initialization failed:\n%s", name, info.error)
 
 
-def register_plugin_pages():
-    """将所有插件页面注册为 NiceGUI 路由"""
+def register_plugin_pages() -> None:
+    """Register all plugin pages as NiceGUI routes."""
     from nicegui import ui
 
     pages = get_plugin_pages()
@@ -234,10 +291,10 @@ def register_plugin_pages():
                     await result
 
 
-def get_plugin_pages():
-    """获取所有插件的页面处理函数 {plugin_name: page_handler}"""
+def get_plugin_pages() -> dict[str, Any]:
+    """Get all plugin page handlers {plugin_name: page_handler}."""
     plugins = discover_plugins()
-    pages = {}
+    pages: dict[str, Any] = {}
 
     for name, info in plugins.items():
         page_handler = getattr(info.instance, "page", None)
@@ -247,18 +304,18 @@ def get_plugin_pages():
     return pages
 
 
-def get_all_plugins():
-    """获取所有已发现的插件信息"""
+def get_all_plugins() -> dict[str, PluginInfo]:
+    """Get all discovered plugins."""
     return discover_plugins()
 
 
-def get_plugin(name):
-    """按名称获取单个插件信息"""
+def get_plugin(name: str) -> Optional[PluginInfo]:
+    """Get a single plugin by name."""
     return discover_plugins().get(name)
 
 
-def _load_plugins_config():
-    """读取插件配置文件"""
+def _load_plugins_config() -> dict:
+    """Read the plugins config file."""
     import json5
     if not os.path.exists(PLUGIN_CONFIG_DIR):
         return {"disabled": []}
@@ -269,20 +326,20 @@ def _load_plugins_config():
         return {"disabled": []}
 
 
-def _save_plugins_config(config):
-    """保存插件配置文件"""
+def _save_plugins_config(config: dict) -> None:
+    """Write the plugins config file."""
     import json5
     with open(PLUGIN_CONFIG_DIR, "w", encoding="utf-8") as f:
         json5.dump(config, f, ensure_ascii=False, indent=4, quote_keys=True)
 
 
-def get_disabled_plugins():
-    """获取已禁用的插件列表"""
+def get_disabled_plugins() -> list[str]:
+    """Get list of disabled plugin names."""
     return _load_plugins_config().get("disabled", [])
 
 
-def set_plugin_disabled(name, disabled):
-    """设置插件禁用状态"""
+def set_plugin_disabled(name: str, disabled: bool) -> None:
+    """Set the disabled state of a plugin."""
     config = _load_plugins_config()
     disabled_list = config.get("disabled", [])
     if disabled and name not in disabled_list:
@@ -293,8 +350,8 @@ def set_plugin_disabled(name, disabled):
     _save_plugins_config(config)
 
 
-def reload_plugins(mct=None):
-    """强制重新加载所有插件"""
+def reload_plugins(mct: Any = None) -> dict[str, PluginInfo]:
+    """Force reload all plugins."""
     global _plugin_cache
     _plugin_cache = None
     initialization.plugins.clear()
@@ -303,8 +360,14 @@ def reload_plugins(mct=None):
     return plugins
 
 
-def import_plugin(zip_path):
-    """从 zip 文件导入插件，返回 (success, message)"""
+def _invalidate_cache() -> None:
+    """Clear the plugin discovery cache."""
+    global _plugin_cache
+    _plugin_cache = None
+
+
+def import_plugin(zip_path: str) -> tuple[bool, str]:
+    """Import a plugin from a zip file. Returns (success, message)."""
     try:
         with zipfile.ZipFile(zip_path, 'r') as zf:
             meta_found = False
@@ -324,6 +387,13 @@ def import_plugin(zip_path):
                 return False, "Invalid plugin: missing metadata.yaml or author/name"
 
             target_dir = os.path.join(PLUGIN_DIR, author, plugin_name)
+            target_dir = os.path.abspath(target_dir)
+
+            # Issue 12: Validate target_dir is within PLUGIN_DIR to prevent zip slip
+            if not target_dir.startswith(os.path.abspath(PLUGIN_DIR) + os.sep) \
+                    and target_dir != os.path.abspath(PLUGIN_DIR):
+                return False, "Invalid plugin path: directory traversal detected"
+
             if os.path.exists(target_dir):
                 shutil.rmtree(target_dir)
             os.makedirs(target_dir, exist_ok=True)
@@ -336,6 +406,17 @@ def import_plugin(zip_path):
                 if not relative:
                     continue
                 target_path = os.path.join(target_dir, relative)
+                target_path = os.path.abspath(target_path)
+
+                # Issue 12: Validate each extracted path stays within target_dir
+                if not target_path.startswith(target_dir + os.sep) \
+                        and target_path != target_dir:
+                    logger.warning(
+                        "Zip slip attempt blocked: %s tries to escape to %s",
+                        member, target_path,
+                    )
+                    return False, f"Invalid path in zip: {member}"
+
                 if member.endswith('/'):
                     os.makedirs(target_path, exist_ok=True)
                 else:
@@ -343,15 +424,18 @@ def import_plugin(zip_path):
                     with zf.open(member) as src, open(target_path, 'wb') as dst:
                         dst.write(src.read())
 
-        logger.info("插件 %s 导入成功", plugin_name)
+        # Issue 19: Invalidate cache after import
+        _invalidate_cache()
+
+        logger.info("Plugin %s imported successfully", plugin_name)
         return True, plugin_name
     except Exception as e:
-        logger.error("插件导入失败: %s", traceback.format_exc())
+        logger.error("Plugin import failed: %s", traceback.format_exc())
         return False, str(e)
 
 
-def export_plugin(name):
-    """导出插件为 zip 文件，返回 zip 文件路径或 None"""
+def export_plugin(name: str) -> Optional[str]:
+    """Export a plugin to a zip file. Returns zip file path or None."""
     plugins = discover_plugins()
     if name not in plugins:
         return None
@@ -370,15 +454,15 @@ def export_plugin(name):
                     arcname = os.path.relpath(file_path, os.path.dirname(plugin_dir))
                     zf.write(file_path, arcname)
 
-        logger.info("插件 %s 导出成功: %s", name, zip_path)
+        logger.info("Plugin %s exported: %s", name, zip_path)
         return zip_path
-    except Exception as e:
-        logger.error("插件导出失败: %s", traceback.format_exc())
+    except Exception:
+        logger.error("Plugin export failed:\n%s", traceback.format_exc())
         return None
 
 
-def delete_plugin(name):
-    """删除插件目录，返回 (success, message)"""
+def delete_plugin(name: str) -> tuple[bool, str]:
+    """Delete a plugin directory. Returns (success, message)."""
     plugins = discover_plugins()
     if name not in plugins:
         return False, f"Plugin '{name}' not found"
@@ -394,8 +478,11 @@ def delete_plugin(name):
         if os.path.exists(author_dir) and not os.listdir(author_dir):
             os.rmdir(author_dir)
 
-        logger.info("插件 %s 已删除", name)
+        # Issue 19: Invalidate cache after delete
+        _invalidate_cache()
+
+        logger.info("Plugin %s deleted", name)
         return True, name
-    except Exception as e:
-        logger.error("插件删除失败: %s", traceback.format_exc())
-        return False, str(e)
+    except Exception:
+        logger.error("Plugin deletion failed:\n%s", traceback.format_exc())
+        return False, traceback.format_exc()
