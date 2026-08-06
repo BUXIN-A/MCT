@@ -15,14 +15,24 @@
         "home.title": "Home",
         "home.content": "# MCT\n## Introduction\nMCT stands for Minecraft Tools. It integrates all the World-related tools developed by me for this project, providing a user-friendly interface and functions to help players and developers operate and manage the game more efficiently.",
 
-        "resource.title": "Resource Pack Tool",
+        "tools.title": "Tools Box",
+
+        "plugins.title": "Plugins",
 
         "about.title": "About",
 
-        "setting.title": "Settings",
-        "setting.system.title": "System Settings",
-        "setting.language": "Language",
-        "setting.language_tip": "Restart the application to apply language settings",
-        "setting.theme.title": "Theme Settings"
+        "settings.title": "Settings",
+        "settings.system.title": "System Settings",
+        "settings.language": "Language",
+        "settings.language_tip": "Restart the application to apply language settings",
+        "settings.theme.title": "Theme Settings",
+
+        "plugin_pages.title": "Plugin Pages",
+
+        "plugins.empty": "No plugins installed",
+        "plugins.page_nav": "Plugin Page Navigation",
+        "plugins.status.loaded": "Loaded",
+        "plugins.status.error": "Load Failed",
+        "plugins.status.uninit": "Uninitialized"
     }
 }

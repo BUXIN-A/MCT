@@ -15,14 +15,24 @@
         "home.title": "首页",
         "home.content": "# MCT\n## 介绍\nMCT 全称 Minecraft Tools\nMCT整合了本项目开发的所有我的世界相关工具，提供了方便的界面和功能，帮助玩家以及开发者更高效地进行游戏和管理。",
 
-        "resource.title": "资源包工具",
+        "tools.title": "工具箱",
+
+        "plugins.title": "插件",
 
         "about.title": "关于",
 
-        "setting.title": "设置",
-        "setting.system.title": "系统设置",
-        "setting.language": "语言",
-        "setting.language_tip": "重启应用以应用语言设置",
-        "setting.theme.title": "主题设置"
+        "settings.title": "设置",
+        "settings.system.title": "系统设置",
+        "settings.language": "语言",
+        "settings.language_tip": "重启应用以应用语言设置",
+        "settings.theme.title": "主题设置",
+
+        "plugin_pages.title": "插件页面",
+
+        "plugins.empty": "暂无已安装的插件",
+        "plugins.page_nav": "插件页面导航",
+        "plugins.status.loaded": "已加载",
+        "plugins.status.error": "加载失败",
+        "plugins.status.uninit": "未初始化"
     }
 }

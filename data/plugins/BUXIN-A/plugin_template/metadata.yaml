@@ -1,0 +1,6 @@
+name: plugin_template # 插件唯一识别名
+display_name: 插件模板 # 展示名字
+desc: 一个插件模板示例 # 插件描述
+version: 1.0.0 # 插件版本号
+author: BUXIN-A
+repo: https://github.com/BUXIN-A/MCT # 插件的仓库地址

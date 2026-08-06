@@ -1,0 +1,4 @@
+json5
+nicegui
+python-i18n
+pyyaml

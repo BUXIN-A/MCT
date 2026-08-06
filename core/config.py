@@ -3,7 +3,7 @@ import json5
 from typing import Final
 
 class Function:
-    def get_config_value(self, key: str) -> any:
+    def get_config_value(self, key: str):
         with open(Config.CONFIG_DIR, "r", encoding="utf-8") as f:
             config = json5.load(f)
         for part in key.split('.'):
@@ -11,7 +11,7 @@ class Function:
                 raise KeyError(key)
             config = config[part]
         return config
-    def set_config_value(self, key: str, value: any) -> None:
+    def set_config_value(self, key: str, value) -> None:
         with open(Config.CONFIG_DIR, "r", encoding="utf-8") as f:
             config = json5.load(f)
         parts = key.split('.')

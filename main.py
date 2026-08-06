@@ -2,7 +2,6 @@
 from core.logging import logger
 from ui.app import App
 from core.locales import I18N, init_locales
-import os, sys
 
 logger.info(r'''
   __  __ _                            __ _     _______          _ _               
@@ -17,7 +16,6 @@ def main():
     try:
         init_locales()
         logger.info(I18N("log.i18n"))
-
         app = App()
         app.run()
     except Exception as e:
