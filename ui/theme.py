@@ -9,16 +9,6 @@ from ui import menu
 def frame(navtitle: str):
     # 设置全局主题
     ui.colors(primary=config.Function().get_config_value('theme.primary'), secondary=config.Function().get_config_value('theme.secondary'), accent=config.Function().get_config_value('theme.accent'))
-    # 全局字体 assets\ttf\JetBrainsMono-Bold.woff2
-    ui.add_body_html('''
-    @font-face {
-       font-family: 'JetBrainsMono-Bold';
-       src: url('assets/ttf/JetBrainsMono-Bold.woff2') format('woff');
-    }
-    body {
-       font-family: 'JetBrainsMono-Bold', sans-serif;
-    }
-''')
     
     # 左侧抽屉菜单
     with ui.left_drawer().classes('bg-blue-100') as left_drawer:
