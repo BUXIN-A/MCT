@@ -5,7 +5,7 @@ from core import invalidate_locale_cache
 
 from ui import theme
 from nicegui import ui
-from typing import Dict, Optional
+from typing import Dict
 
 LANGUAGE_MAP: Dict[str, str] = {
     'zh_cn': '中文',
