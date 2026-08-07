@@ -30,7 +30,7 @@ class Function:
 class Config:
     """全局配置"""
     # ── 应用信息 ──
-    APP_VERSION: Final = "0.0.2"
+    APP_VERSION: Final = "0.0.3"
 
     # ── 窗口 ── #正式版启用
     WINDOW_SIZE: Final = (1200, 760)

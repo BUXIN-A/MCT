@@ -9,7 +9,7 @@ from ui import menu
 def frame(navtitle: str):
     # 设置全局主题
     ui.colors(primary=config.Function().get_config_value('theme.primary'), secondary=config.Function().get_config_value('theme.secondary'), accent=config.Function().get_config_value('theme.accent'))
-    
+
     # 左侧抽屉菜单
     with ui.left_drawer().classes('bg-blue-100') as left_drawer:
         ui.label(I18N('menu')).classes('text-lg font-bold p-4 text-center w-full')
@@ -21,5 +21,5 @@ def frame(navtitle: str):
         ui.label(navtitle).classes('font-bold')
 
     # 页面主体内容
-    with ui.column().classes('items-start justify-start h-screen no-wrap p-9 w-full overflow-y-auto'):
+    with ui.column().classes('items-start justify-start h-full no-wrap p-9 w-full overflow-y-auto').style('padding-top: 64px;'):
         yield

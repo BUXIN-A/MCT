@@ -16,6 +16,7 @@
         "home.content": "# MCT\n## 介绍\nMCT 全称 Minecraft Tools\nMCT整合了本项目开发的所有我的世界相关工具，提供了方便的界面和功能，帮助玩家以及开发者更高效地进行游戏和管理。",
 
         "tools.title": "工具箱",
+        "tools.open": "打开",
 
         "plugins.title": "插件",
 
@@ -28,14 +29,12 @@
         "settings.theme.title": "主题设置",
 
         "plugin_pages.title": "插件页面",
-
         "plugins.empty": "暂无已安装的插件",
         "plugins.page_nav": "插件页面导航",
         "plugins.status.loaded": "已加载",
         "plugins.status.error": "加载失败",
         "plugins.status.uninit": "未初始化",
         "plugins.status.disabled": "已禁用",
-
         "plugins.detail": "插件详情",
         "plugins.detail.name": "名称",
         "plugins.detail.display_name": "显示名称",
@@ -46,10 +45,8 @@
         "plugins.detail.status": "状态",
         "plugins.detail.path": "路径",
         "plugins.detail.error_info": "错误信息",
-
         "plugins.enable": "启用",
         "plugins.disable": "禁用",
-
         "plugins.import": "导入插件",
         "plugins.import.success": "插件导入成功",
         "plugins.import.fail": "插件导入失败",
@@ -61,6 +58,19 @@
         "plugins.delete.fail": "插件删除失败",
         "plugins.delete.cancel": "已取消删除",
         "plugins.confirm": "确认",
-        "plugins.cancel": "取消"
+        "plugins.cancel": "取消",
+
+        "tool.resource.title": "资源包工具",
+        "tool.resource.description": "资源包工具用于管理和编辑 Minecraft 资源包，提供了方便的界面和功能，帮助玩家或开发者更高效地进行游戏和管理。",
+        "tool.resource.create_project": "创建项目",
+        "tool.resource.project.name": "项目名",
+        "tool.resource.project.description": "项目描述",
+        "tool.resource.project.min_format": "最小版本代号",
+        "tool.resource.project.max_format": "最大版本代号",
+        "tool.resource.project.format.default": "预设值",
+        "tool.resource.project.tip_num": "你只能输入纯数字",
+        "tool.resource.ok": "确定",
+        "tool.resource.cancle": "取消",
+        "tool.resource.delete_project": "删除项目"
     }
 }

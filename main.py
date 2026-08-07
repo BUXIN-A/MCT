@@ -18,6 +18,8 @@ def main():
         logger.info(I18N("log.i18n"))
         app = App()
         app.run()
+    except KeyboardInterrupt:
+        logger.info("已由用户中断，程序退出")
     except Exception as e:
         logger.exception("应用运行时发生错误: %s", e)
 

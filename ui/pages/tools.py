@@ -19,9 +19,6 @@ class ToolsPage:
                 "description": I18N('tool.resource.description'),
             }
         ]
-        @ui.page('/tools/resource')
-        def tool_resource_page():
-            resource.ToolResourcePage().show()
 
     def open_tool(self, page):
         ui.navigate.to(page)

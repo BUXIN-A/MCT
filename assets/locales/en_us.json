@@ -16,6 +16,7 @@
         "home.content": "# MCT\n## Introduction\nMCT stands for Minecraft Tools. It integrates all the World-related tools developed by me for this project, providing a user-friendly interface and functions to help players and developers operate and manage the game more efficiently.",
 
         "tools.title": "Tools Box",
+        "tools.open": "Open",
 
         "plugins.title": "Plugins",
 
@@ -28,14 +29,12 @@
         "settings.theme.title": "Theme Settings",
 
         "plugin_pages.title": "Plugin Pages",
-
         "plugins.empty": "No plugins installed",
         "plugins.page_nav": "Plugin Page Navigation",
         "plugins.status.loaded": "Loaded",
         "plugins.status.error": "Load Failed",
         "plugins.status.uninit": "Uninitialized",
         "plugins.status.disabled": "Disabled",
-
         "plugins.detail": "Plugin Details",
         "plugins.detail.name": "Name",
         "plugins.detail.display_name": "Display Name",
@@ -46,10 +45,8 @@
         "plugins.detail.status": "Status",
         "plugins.detail.path": "Path",
         "plugins.detail.error_info": "Error Info",
-
         "plugins.enable": "Enable",
         "plugins.disable": "Disable",
-
         "plugins.import": "Import Plugin",
         "plugins.import.success": "Plugin imported successfully",
         "plugins.import.fail": "Plugin import failed",
@@ -61,6 +58,19 @@
         "plugins.delete.fail": "Plugin deletion failed",
         "plugins.delete.cancel": "Deletion cancelled",
         "plugins.confirm": "Confirm",
-        "plugins.cancel": "Cancel"
+        "plugins.cancel": "Cancel",
+
+        "tool.resource.title": "Resource Pack Tool",
+        "tool.resource.description": "The Resource Pack Tool is used to manage and edit Minecraft resource packs, providing a user-friendly interface and functions to help players or developers operate and manage the game more efficiently.",
+        "tool.resource.create_project": "Create Project",
+        "tool.resource.project.name": "Project Name",
+        "tool.resource.project.description": "Project Description",
+        "tool.resource.project.min_format": "Minimum version code",
+        "tool.resource.project.max_format": "Maximum version code",
+        "tool.resource.project.format.default": "Default value",
+        "tool.resource.project.tip_num": "You can only input pure numbers",
+        "tool.resource.ok": "OK",
+        "tool.resource.cancle": "Cancle",
+        "tool.resource.delete_project": "Delete Project"
     }
 }
