@@ -31,6 +31,7 @@
         "plugin_pages.title": "插件页面",
         "plugins.empty": "暂无已安装的插件",
         "plugins.page_nav": "插件页面导航",
+        "plugins.page_not_found": "插件页面不存在",
         "plugins.status.loaded": "已加载",
         "plugins.status.error": "加载失败",
         "plugins.status.uninit": "未初始化",

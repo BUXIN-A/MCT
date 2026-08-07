@@ -31,6 +31,7 @@
         "plugin_pages.title": "Plugin Pages",
         "plugins.empty": "No plugins installed",
         "plugins.page_nav": "Plugin Page Navigation",
+        "plugins.page_not_found": "Plugin page not found",
         "plugins.status.loaded": "Loaded",
         "plugins.status.error": "Load Failed",
         "plugins.status.uninit": "Uninitialized",

@@ -1,4 +1,5 @@
 """Plugin system"""
+import functools
 import os
 import importlib.util
 import asyncio
@@ -7,9 +8,12 @@ import traceback
 import shutil
 import zipfile
 import tempfile
+from contextlib import contextmanager
 from typing import Any, Optional
 
+import nicegui
 import yaml
+from nicegui import ui
 
 from core import I18N
 from core.logging import logger
@@ -121,6 +125,40 @@ def discover_plugins() -> dict[str, PluginInfo]:
     return plugins
 
 
+@contextmanager
+def _guarded_ui_page(plugin_key: str):
+    """
+    插件模块加载期间临时包装 nicegui 的 @ui.page。
+
+    插件若直接使用 @ui.page 注册路由，这些路由不会经过统一的
+    /plugin/{page_id} 入口。包装后，路由处理器会在请求时检查插件
+    是否被禁用，禁用则跳转回插件页，从而保证禁用后页面不可访问。
+    """
+    page = getattr(nicegui.ui, "page", None)
+    if page is None:
+        yield
+        return
+
+    def _page_wrapper(path, *args, **kwargs):
+        def decorator(func):
+            @functools.wraps(func)
+            async def _guarded(*a, **kw):
+                if plugin_key in get_disabled_plugins():
+                    ui.navigate.to('/plugins')
+                    return
+                result = func(*a, **kw)
+                if inspect.isawaitable(result):
+                    await result
+            return page(path, *args, **kwargs)(_guarded)
+        return decorator
+
+    nicegui.ui.page = _page_wrapper
+    try:
+        yield
+    finally:
+        nicegui.ui.page = page
+
+
 def _load_single_plugin(
     author: str, plugin_dir_name: str, plugin_path: str
 ) -> Optional[PluginInfo]:
@@ -131,6 +169,21 @@ def _load_single_plugin(
         meta = PluginMeta(name=plugin_dir_name, author=author)
     if not meta.author:
         meta.author = author
+
+    plugin_key = meta.name or plugin_dir_name
+
+    # 禁用插件：不执行任何模块代码（不加载、不注册页面），仅保留元信息。
+    # 保证禁用后插件完全停止运行，且其 @ui.page 路由不会被重复注册。
+    if plugin_key in get_disabled_plugins():
+        logger.info("Plugin %s is disabled, skipping module load", plugin_key)
+        return PluginInfo(
+            author=author,
+            plugin_dir=plugin_path,
+            meta=meta,
+            module=None,
+            plugin_cls=None,
+            instance=None,
+        )
 
     module = None
     plugin_cls = None
@@ -149,7 +202,9 @@ def _load_single_plugin(
                 continue
 
             module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            # 加载期间拦截 @ui.page，使插件直接注册的路由也能感知禁用状态
+            with _guarded_ui_page(plugin_key):
+                spec.loader.exec_module(module)
             logger.debug(
                 "Plugin module loaded: %s/%s [%s]",
                 author, plugin_dir_name, filename,
@@ -290,30 +345,36 @@ def run_plugins(mct: Any = None) -> None:
 
 
 def register_plugin_pages() -> None:
-    """Register all plugin pages as NiceGUI routes."""
-    from nicegui import ui
+    """
+    注册统一的插件页面入口 /plugin/{page_id}。
 
-    pages = get_plugin_pages()
-    all_plugins = get_all_plugins()
-    disabled = get_disabled_plugins()
+    采用单一 catch-all 路由 + 请求时动态分派：
+    - 插件禁用状态在每次请求时检查，启用/禁用即时生效；
+    - 不再为每个插件单独注册路由，避免禁用后旧路由残留。
+    """
+    @ui.page('/plugin/{page_id}')
+    async def _plugin_page(page_id: str):
+        if page_id in get_disabled_plugins():
+            ui.notify(I18N('plugins.status.disabled'), type='warning')
+            ui.navigate.to('/plugins')
+            return
 
-    for page_id, page_handler in pages.items():
-        if page_id in disabled:
-            continue
+        handler = get_plugin_pages().get(page_id)
+        if handler is None:
+            ui.notify(I18N('plugins.page_not_found'), type='warning')
+            ui.navigate.to('/plugins')
+            return
 
-        meta = all_plugins[page_id].meta if page_id in all_plugins else None
+        meta = None
+        all_plugins = get_all_plugins()
+        if page_id in all_plugins:
+            meta = all_plugins[page_id].meta
         title = meta.display_name if meta else page_id
 
-        @ui.page(f'/plugin/{page_id}')
-        async def _page_handler(_handler=page_handler, _title=title, _pid=page_id):
-            if _pid in get_disabled_plugins():
-                ui.notify(I18N('plugins.status.disabled'), type='warning')
-                ui.navigate.to('/plugins')
-                return
-            with theme.frame(_title):
-                result = _handler()
-                if inspect.isawaitable(result):
-                    await result
+        with theme.frame(title):
+            result = handler()
+            if inspect.isawaitable(result):
+                await result
 
 
 def get_plugin_pages() -> dict[str, Any]:
