@@ -11,8 +11,10 @@ from typing import Any, Optional
 
 import yaml
 
+from core import I18N
 from core.logging import logger
 from core.plugin.register.handler import initialization
+from core.plugin.register.filter import filter as plugin_filter
 from ui import theme
 
 PLUGIN_DIR: str = os.path.abspath(
@@ -22,6 +24,8 @@ PLUGIN_DIR: str = os.path.abspath(
 PLUGIN_CONFIG_DIR: str = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "data", "plugins_config.json")
 )
+
+MAX_PLUGIN_SIZE: int = 512 * 1024 * 1024
 
 
 class PluginMeta:
@@ -83,6 +87,7 @@ class PluginInfo:
 
 
 _plugin_cache: Optional[dict[str, PluginInfo]] = None
+_running_tasks: set[asyncio.Task] = set()
 
 
 def discover_plugins() -> dict[str, PluginInfo]:
@@ -212,23 +217,55 @@ def _load_single_plugin(
     return info
 
 
-def _run_async(coro: Any) -> Any:
-    """Run a coroutine in an existing or new event loop."""
+def _run_async(coro: Any) -> Optional[asyncio.Task]:
+    """
+    在当前运行中的事件循环上调度协程
+    """
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = None
 
     if loop is not None:
-        import warnings
-        warnings.warn(
-            "Calling async plugin init from within an existing event loop. "
-            "Ensure this runs in an async context.",
-            RuntimeWarning,
+        task = loop.create_task(coro)
+        _running_tasks.add(task)
+        task.add_done_callback(_running_tasks.discard)
+        task.add_done_callback(_log_task_error)
+        return task
+    return asyncio.run(coro)
+
+
+def _log_task_error(task: asyncio.Task) -> None:
+    """记录后台任务未被捕获的异常。"""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("Plugin async initialization task failed: %s", exc)
+
+
+async def _initialize_plugin(info: PluginInfo, init_method: Any, mct: Any) -> None:
+    """执行单个插件的 initialize，统一处理同步/异步返回与异常记录。"""
+    try:
+        sig = inspect.signature(init_method)
+        if len(sig.parameters) > 1:
+            result = init_method(mct)
+        else:
+            result = init_method()
+        if inspect.isawaitable(result):
+            await result
+
+        info.loaded = True
+        logger.info(
+            "Plugin %s (%s) initialized successfully",
+            info.meta.display_name, info.meta.version,
         )
-        return asyncio.ensure_future(coro)
-    else:
-        return asyncio.run(coro)
+    except Exception:
+        info.error = traceback.format_exc()
+        logger.error(
+            "Plugin %s initialization failed:\n%s",
+            info.meta.name, info.error,
+        )
 
 
 def run_plugins(mct: Any = None) -> None:
@@ -246,23 +283,10 @@ def run_plugins(mct: Any = None) -> None:
             logger.warning("Plugin %s has no initialize method, skipping", name)
             continue
 
-        try:
-            sig = inspect.signature(init_method)
-            if len(sig.parameters) > 1:
-                result = init_method(mct)
-            else:
-                result = init_method()
-            if inspect.isawaitable(result):
-                _run_async(result)
+        if mct is not None and hasattr(info.instance, "mct"):
+            info.instance.mct = mct
 
-            info.loaded = True
-            logger.info(
-                "Plugin %s (%s) initialized successfully",
-                info.meta.display_name, info.meta.version,
-            )
-        except Exception:
-            info.error = traceback.format_exc()
-            logger.error("Plugin %s initialization failed:\n%s", name, info.error)
+        _run_async(_initialize_plugin(info, init_method, mct))
 
 
 def register_plugin_pages() -> None:
@@ -281,7 +305,11 @@ def register_plugin_pages() -> None:
         title = meta.display_name if meta else page_id
 
         @ui.page(f'/plugin/{page_id}')
-        async def _page_handler(_handler=page_handler, _title=title):
+        async def _page_handler(_handler=page_handler, _title=title, _pid=page_id):
+            if _pid in get_disabled_plugins():
+                ui.notify(I18N('plugins.status.disabled'), type='warning')
+                ui.navigate.to('/plugins')
+                return
             with theme.frame(_title):
                 result = _handler()
                 if inspect.isawaitable(result):
@@ -352,6 +380,7 @@ def reload_plugins(mct: Any = None) -> dict[str, PluginInfo]:
     global _plugin_cache
     _plugin_cache = None
     initialization.plugins.clear()
+    plugin_filter.pages.clear()
     plugins = discover_plugins()
     run_plugins(mct)
     return plugins
@@ -363,8 +392,20 @@ def _invalidate_cache() -> None:
     _plugin_cache = None
 
 
+def _cleanup_import(target_dir: str) -> None:
+    """删除导入失败时留下的插件目录，以及因此变为空的作者目录。"""
+    shutil.rmtree(target_dir, ignore_errors=True)
+    author_dir = os.path.dirname(target_dir)
+    try:
+        if os.path.isdir(author_dir) and not os.listdir(author_dir):
+            os.rmdir(author_dir)
+    except OSError:
+        pass
+
+
 def import_plugin(zip_path: str) -> tuple[bool, str]:
     """Import a plugin from a zip file. Returns (success, message)."""
+    target_dir = None
     try:
         with zipfile.ZipFile(zip_path, 'r') as zf:
             meta_found = False
@@ -394,6 +435,7 @@ def import_plugin(zip_path: str) -> tuple[bool, str]:
                 shutil.rmtree(target_dir)
             os.makedirs(target_dir, exist_ok=True)
 
+            total_size = 0
             for member in zf.namelist():
                 parts = member.split('/')
                 if len(parts) <= 1:
@@ -410,14 +452,36 @@ def import_plugin(zip_path: str) -> tuple[bool, str]:
                         "Zip slip attempt blocked: %s tries to escape to %s",
                         member, target_path,
                     )
+                    _cleanup_import(target_dir)
                     return False, f"Invalid path in zip: {member}"
 
                 if member.endswith('/'):
                     os.makedirs(target_path, exist_ok=True)
                 else:
+                    total_size += zf.getinfo(member).file_size
+                    if total_size > MAX_PLUGIN_SIZE:
+                        logger.warning(
+                            "Plugin %s exceeds maximum unpacked size, aborting",
+                            plugin_name,
+                        )
+                        _cleanup_import(target_dir)
+                        return False, "Plugin exceeds maximum unpacked size"
                     os.makedirs(os.path.dirname(target_path), exist_ok=True)
                     with zf.open(member) as src, open(target_path, 'wb') as dst:
                         dst.write(src.read())
+
+            # 校验
+            if not os.path.isfile(os.path.join(target_dir, "metadata.yaml")):
+                logger.warning(
+                    "Plugin %s has an invalid zip structure "
+                    "(expected a single '<plugin_name>/' folder), cleaning up",
+                    plugin_name,
+                )
+                _cleanup_import(target_dir)
+                return False, (
+                    "Invalid plugin structure: zip must contain a single "
+                    f"'{plugin_name}/' folder"
+                )
 
         _invalidate_cache()
 
@@ -425,6 +489,8 @@ def import_plugin(zip_path: str) -> tuple[bool, str]:
         return True, plugin_name
     except Exception as e:
         logger.error("Plugin import failed: %s", traceback.format_exc())
+        if target_dir is not None:
+            _cleanup_import(target_dir)
         return False, str(e)
 
 
@@ -471,6 +537,10 @@ def delete_plugin(name: str) -> tuple[bool, str]:
         author_dir = os.path.dirname(plugin_dir)
         if os.path.exists(author_dir) and not os.listdir(author_dir):
             os.rmdir(author_dir)
+
+        # 清理注册表残留
+        initialization.plugins.pop(name, None)
+        plugin_filter.pages.pop(name, None)
 
         _invalidate_cache()
 

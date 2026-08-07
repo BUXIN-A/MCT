@@ -2,7 +2,6 @@
 import json5
 from typing import Final
 
-@staticmethod
 class Function:
     def get_config_value(self, key: str):
         with open(Config.CONFIG_DIR, "r", encoding="utf-8") as f:

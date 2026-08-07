@@ -39,24 +39,35 @@ def ask_create_project():
 def create_project(dialog, name, description, min_format_num, max_format_num):
     dialog.close()
     logger.info('创建新项目')
-    if description == "": description="This is a Resource Pack"
-    if not check.is_number(min_format_num): min_format_num = 0
-    if not check.is_number(max_format_num): max_format_num = 9999
+    if description == "":
+        description = "This is a Resource Pack"
+    if not check.is_number(min_format_num):
+        min_format_num = 0
+    if not check.is_number(max_format_num):
+        max_format_num = 9999
     if name == '':
         logger.debug('项目未命名，采用随机命名')
-        name = uuid.uuid1()
-        os.makedirs(f'{PROJECT_DIR}/{name}')
-        with open(f'{PROJECT_DIR}/{name}/pack.mcmeta', 'w') as infomation:
-            content = ('{{\n"pack": {{\n"description": "{0}",\n"pack_format": 9999,\n"supported_formats": [{1}, {2}],\n"min_format": {1},\n"max_format": {2}\n}}\n}}'.format(description, min_format_num, max_format_num))
-            infomation.write(content)
+        name = str(uuid.uuid1())
     elif name in get_project_list():
         logger.debug('已存在项目')
         ui.notify(message='已存在项目')
-    else:
-        os.makedirs(f'{PROJECT_DIR}/{name}')
-        with open(f'{PROJECT_DIR}/{name}/pack.mcmeta', 'w') as infomation:
-            content = ('{{\n"pack": {{\n"description": "{0}",\n"pack_format": 9999,\n"supported_formats": [{1}, {2}],\n"min_format": {1},\n"max_format": {2}\n}}\n}}'.format(description, min_format_num, max_format_num))
-            infomation.write(content)
+        return
+    _write_pack_mcmeta(name, description, min_format_num, max_format_num)
+
+def _write_pack_mcmeta(name, description, min_format, max_format):
+    project_dir = os.path.join(PROJECT_DIR, name)
+    os.makedirs(project_dir, exist_ok=True)
+    content = {
+        "pack": {
+            "description": description,
+            "pack_format": 9999,
+            "supported_formats": [int(float(min_format)), int(float(max_format))],
+            "min_format": int(float(min_format)),
+            "max_format": int(float(max_format)),
+        }
+    }
+    with open(os.path.join(project_dir, 'pack.mcmeta'), 'w', encoding='utf-8') as f:
+        json5.dump(content, f, ensure_ascii=False, indent=4)
 def delete_project():
     ...
 

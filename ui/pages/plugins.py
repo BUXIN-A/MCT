@@ -5,7 +5,16 @@ from core.plugin import plugin
 from ui import theme
 from nicegui import ui
 import os
+import shutil
 import tempfile
+import threading
+
+
+def _schedule_temp_cleanup(directory, delay: float = 60.0) -> None:
+    threading.Timer(
+        delay,
+        lambda: shutil.rmtree(directory, ignore_errors=True),
+    ).start()
 
 
 class PluginsPage:
@@ -166,6 +175,7 @@ class PluginsPage:
         if zip_path:
             ui.download(zip_path, filename=f"{name}.zip")
             ui.notify(I18N('plugins.export.success'), type='positive')
+            _schedule_temp_cleanup(os.path.dirname(zip_path))
         else:
             ui.notify(I18N('plugins.export.fail'), type='negative')
 

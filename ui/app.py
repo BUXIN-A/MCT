@@ -44,6 +44,5 @@ class App:
                favicon='assets/icons/mct.ico',
                language='zh-CN',
                show=False,
-               native=False,
                reload=True
                )
